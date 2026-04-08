@@ -705,8 +705,8 @@ sudo apt-get install -y nodejs
 node --version   <span class="comment"># should print v24.x.x</span>
 
 <span class="comment"># Install OpenClaw</span>
-curl -fsSL https://openclaw.ai/install.sh | bash
-
+curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
+              
 <span class="comment"># Reload shell to pick up the openclaw binary</span>
 source ~/.bashrc
 
