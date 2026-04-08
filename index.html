@@ -108,7 +108,7 @@
     .section-header.centered .section-desc { margin: 0 auto; }
 
     /* ── Prerequisites ── */
-    .prereq-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .prereq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     .prereq-card { background: var(--bg-white); border: 1px solid var(--border-gray); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-standard); transition: box-shadow 0.2s, transform 0.2s; }
     .prereq-card:hover { box-shadow: var(--shadow-elevated); transform: translateY(-2px); }
     .prereq-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
@@ -229,6 +229,20 @@
     .copy-btn:hover { background: rgba(255,255,255,0.18); color: white; }
     .copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
 
+    /* ── Step Drawer (collapsible) ── */
+    .step-drawer { border: 1px solid var(--border-gray); border-radius: 12px; overflow: hidden; margin-top: 16px; }
+    .step-drawer-header { padding: 13px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; transition: background 0.15s; gap: 12px; background: white; }
+    .step-drawer-header:hover { background: rgba(0,0,0,0.025); }
+    .step-drawer-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; color: var(--text-dark); }
+    .step-drawer-badge { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; background: rgba(234,88,12,0.08); color: #ea580c; padding: 3px 9px; border-radius: 9999px; white-space: nowrap; }
+    .step-drawer-chevron { color: var(--text-muted); font-size: 18px; transition: transform 0.2s; flex-shrink: 0; line-height: 1; }
+    .step-drawer.open .step-drawer-chevron { transform: rotate(180deg); }
+    .step-drawer-body { display: none; padding: 20px 20px 24px; border-top: 1px solid var(--border-light); background: #fafafa; }
+    .step-drawer.open .step-drawer-body { display: block; }
+    .step-drawer-body > p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; }
+    .step-drawer-body .step-drawer-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 16px 0 8px; }
+    .step-drawer-body .step-drawer-label:first-of-type { margin-top: 0; }
+
     /* ── Responsive ── */
     @media (max-width: 1024px) {
       .models-grid { grid-template-columns: repeat(3, 1fr); }
@@ -274,6 +288,7 @@
       <li><a href="#models">Models</a></li>
       <li><a href="#optimization">Optimization</a></li>
       <li><a href="#faq">FAQ</a></li>
+      <li> </li>
       <li><a href="https://cloud.oracle.com/free" target="_blank" rel="noopener" class="nav-cta">OCI Free Tier →</a></li>
     </ul>
     <div class="nav-hamburger" onclick="toggleMenu(this)">
@@ -291,12 +306,13 @@
 <section class="hero">
   <div class="container">
     <div class="hero-badge">
-      <div class="hero-badge-dot"></div>
       Oracle Cloud Always Free &middot; Zero Public Ports
     </div>
     <h1>Self-Host <span class="accent">OpenClaw</span> on Oracle Cloud</h1>
     <p class="hero-sub">
-      A private Claude Code gateway on your own ARM server, with local Gemma 4 models via Ollama — accessed securely through Tailscale. No public ports. No domain required. $0/month.
+      A private OpenClaw setup on your own server, with local Gemma 4 models via Ollama — accessed securely through Tailscale. <br />
+      No public ports. No domain required. <br /> 
+      $0/month.
     </p>
     <div class="hero-actions">
       <a href="#setup" class="btn-primary">
@@ -324,7 +340,7 @@
       </div>
       <div class="stat-item">
         <div class="stat-value">VPN</div>
-        <div class="stat-label">Tailscale Access</div>
+        <div class="stat-label">Tailscale</div>
       </div>
     </div>
   </div>
@@ -333,7 +349,7 @@
 <!-- ── Prerequisites ── -->
 <section class="section" id="prerequisites">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header centered">
       <div class="section-label">Before You Begin</div>
       <h2>Prerequisites</h2>
       <p class="section-desc">Three things to prepare before you SSH into your instance. All are free.</p>
@@ -351,14 +367,6 @@
         <p>Sign up at <strong>tailscale.com</strong> — free for up to 3 users and 100 devices. Tailscale replaces a public domain and SSL certificate entirely. Your OpenClaw instance lives on your private Tailscale network.</p>
         <span class="tag tag-free">Free Tier</span>
       </div>
-      <div class="prereq-card">
-        <div class="prereq-icon orange">🔑</div>
-        <h3>SSH Key Pair</h3>
-        <p>Generate an Ed25519 key pair before creating the OCI instance. OCI will ask for your public key during provisioning. Once Tailscale SSH is active, you can drop port 22 entirely.</p>
-        <div class="pre-wrap" style="margin-top:12px">
-          <pre style="font-size:12px;padding:12px 16px;border-radius:8px"><code>ssh-keygen -t ed25519 -C "you@example.com"</code></pre>
-        </div>
-      </div>
     </div>
     <div class="note-box" style="margin-top:16px">
       <strong>OCI Always Free Availability:</strong> ARM A1 Flex instances sometimes show "Out of Capacity." Try a different Availability Domain (AD-1, AD-2, AD-3), a different region, or retry at a different time. Most users succeed within 24–48 hours.
@@ -369,7 +377,7 @@
 <!-- ── Setup Steps ── -->
 <section class="section" id="setup" style="background:#fafafa;border-top:1px solid var(--border-light);border-bottom:1px solid var(--border-light)">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header centered">
       <div class="section-label">Installation Guide</div>
       <h2>8-Step Setup</h2>
       <p class="section-desc">Follow in order. Total time is approximately 30–45 minutes. OpenClaw runs as a native systemd service; Ollama runs in Docker.</p>
@@ -410,13 +418,106 @@
             <li><strong>Image:</strong> click <em>Change image</em> → select <strong>Ubuntu 24.04</strong></li>
             <li><strong>Shape:</strong> click <em>Change shape</em> → Ampere → <strong>VM.Standard.A1.Flex</strong> → 4 OCPUs, 24 GB RAM</li>
             <li><strong>Networking:</strong> enable <em>Assign a public IPv4 address</em></li>
-            <li><strong>SSH keys:</strong> paste your public key (<code>~/.ssh/id_ed25519.pub</code>)</li>
+            <li><strong>SSH keys:</strong> download both private and public keys</li>
             <li><strong>Boot volume:</strong> set to <strong>200 GB</strong></li>
             <li>Click <strong>Create</strong> and wait ~2 minutes for Running state</li>
           </ol>
           <div class="note-box">
             <strong>Note:</strong> Record the Public IP address from the instance details — you'll need it to SSH in and to connect Tailscale in Step 7.
           </div>
+
+          <!-- Retry script drawer -->
+          <div class="step-drawer" id="retry-drawer">
+            <div class="step-drawer-header" onclick="toggleDrawer(document.getElementById('retry-drawer'))">
+              <div class="step-drawer-title">
+                <span class="step-drawer-badge">OCI Capacity Issues</span>
+                Automated retry script — keeps trying all Availability Domains until capacity frees up
+              </div>
+              <span class="step-drawer-chevron">⌄</span>
+            </div>
+            <div class="step-drawer-body">
+              <p>ARM A1 Flex instances are frequently out of capacity. The OCI Console silently fails with no retry option. This script uses the OCI CLI to cycle through all three Availability Domains every 60 seconds until provisioning succeeds. <strong>Requires the OCI CLI</strong> — install it first: <a href="https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm" target="_blank" rel="noopener" style="color:var(--brand-blue)">docs.oracle.com/iaas/Content/API/SDKDocs/cliinstall.htm</a>, then run <code>oci setup config</code>.</p>
+
+              <p class="step-drawer-label">Edit and run the retry script</p>
+              <div class="pre-wrap">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <pre><code><span class="comment">#!/bin/bash
+# retry_oci.sh — Retries VM.Standard.A1.Flex provisioning across all ADs
+# Fill in the four variables below, then: chmod +x retry_oci.sh && ./retry_oci.sh</span>
+
+<span class="comment"># ── Fill these in  ─────────────────────────────────────────────────────────</span>
+
+<span class="key">COMPARTMENT_ID</span>=<span class="val">"YOUR_COMPARTMENT_OCID"</span>
+
+<span class="comment"># Ubuntu 24.04 Minimal aarch64 image OCID for your region</span>
+<span class="key">IMAGE_ID</span>=<span class="val">"YOUR_UBUNTU_2404_ARM_IMAGE_OCID"</span>
+
+<span class="comment"># Subnet OCID from your VCN (Networking → VCN → Subnets)</span>
+<span class="key">SUBNET_ID</span>=<span class="val">"YOUR_SUBNET_OCID"</span>
+
+<span class="comment"># Availability Domains — format: "&lt;tenancy-prefix&gt;:&lt;REGION&gt;-AD-&lt;N&gt;"
+# Get the exact strings with: oci iam availability-domain list --query 'data[*].name'</span>
+<span class="key">ADS</span>=(
+  <span class="val">"YOUR-PREFIX:YOUR-REGION-AD-1"</span>
+  <span class="val">"YOUR-PREFIX:YOUR-REGION-AD-2"</span>
+  <span class="val">"YOUR-PREFIX:YOUR-REGION-AD-3"</span>
+)
+
+<span class="comment"># ── Instance config (no changes needed) ──────────────────────────────────────</span>
+
+<span class="key">SHAPE</span>=<span class="val">"VM.Standard.A1.Flex"</span>
+<span class="key">SSH_KEY_FILE</span>=<span class="val">"$HOME/.ssh/id_ed25519.pub"</span>
+<span class="key">DISPLAY_NAME</span>=<span class="val">"openclaw-server"</span>
+<span class="key">OCPUS</span>=4
+<span class="key">MEMORY_GB</span>=24
+<span class="key">BOOT_VOLUME_SIZE_GB</span>=200
+
+<span class="comment"># ── Retry loop ────────────────────────────────────────────────────────────────</span>
+
+attempt=0
+
+while true; do
+  attempt=$((attempt + 1))
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Attempt $attempt"
+
+  for AD in "${ADS[@]}"; do
+    echo "  Trying $AD..."
+
+    if result=$(oci compute instance launch \
+      --compartment-id "$COMPARTMENT_ID" \
+      --availability-domain "$AD" \
+      --image-id "$IMAGE_ID" \
+      --subnet-id "$SUBNET_ID" \
+      --shape "$SHAPE" \
+      --shape-config "{\"ocpus\": $OCPUS, \"memoryInGBs\": $MEMORY_GB}" \
+      --display-name "$DISPLAY_NAME" \
+      --ssh-authorized-keys-file "$SSH_KEY_FILE" \
+      --assign-public-ip true \
+      --boot-volume-size-in-gbs "$BOOT_VOLUME_SIZE_GB" \
+      --is-pv-encryption-in-transit-enabled true \
+      2>&1); then
+      echo ""
+      echo "SUCCESS on $AD!"
+      echo "$result" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)['data']
+print(f'  Instance ID : {d[\"id\"]}')
+print(f'  State       : {d[\"lifecycle-state\"]}')
+print(f'  Public IP   : (visible in OCI Console in ~30s)')
+" 2>/dev/null || echo "$result" | grep -m1 '"id"'
+      exit 0
+    else
+      echo "  Failed: $(echo "$result" | grep -oi '"message":"[^"]*"' | head -1)"
+    fi
+  done
+
+  echo "  All ADs exhausted — waiting 60 seconds..."
+  sleep 60
+done</code></pre>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -629,8 +730,11 @@ openclaw doctor</code></pre>
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             <pre><code><span class="comment"># Security hardening for the gateway</span>
 openclaw config set gateway.bind loopback
-openclaw config set gateway.auth.mode token
 openclaw config set gateway.trustedProxies '["127.0.0.1"]'
+
+<span class="comment"># Opening up security for dev and behind tailscale. Keep token or add passowrd for Prod.</span>
+openclaw config set gateway.auth.mode none
+openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true
 
 <span class="comment"># Enable Tailscale Serve integration (configured in Step 7)</span>
 openclaw config set gateway.tailscale.mode serve
@@ -867,7 +971,7 @@ docker exec -it ollama ollama pull gemma4:27b
 <!-- ── Model Optimization ── -->
 <section class="section" id="optimization" style="background:#fafafa;border-top:1px solid var(--border-light);border-bottom:1px solid var(--border-light)">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header centered">
       <div class="section-label">Performance Tuning</div>
       <h2>Model Optimization</h2>
       <p class="section-desc">The three Ollama environment flags in the docker-compose significantly impact performance on ARM64. Here's what each does and how to tune context length vs RAM.</p>
@@ -946,7 +1050,7 @@ docker exec -it ollama ollama list</code></pre>
 <!-- ── FAQ ── -->
 <section class="section" id="faq">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header centered">
       <div class="section-label">Common Questions</div>
       <h2>FAQ</h2>
     </div>
@@ -1007,7 +1111,6 @@ docker exec -it ollama ollama list</code></pre>
           <li><a href="https://docs.openclaw.ai/install/oracle" target="_blank" rel="noopener">Official OCI Guide</a></li>
           <li><a href="https://docs.openclaw.ai/providers/ollama" target="_blank" rel="noopener">Ollama Provider Docs</a></li>
           <li><a href="https://docs.openclaw.ai/install/docker" target="_blank" rel="noopener">Docker Install Docs</a></li>
-          <li><a href="https://cognio.so/clawdbot/self-hosting" target="_blank" rel="noopener">Cognio Self-Hosting</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1016,19 +1119,18 @@ docker exec -it ollama ollama list</code></pre>
           <li><a href="https://cloud.oracle.com/free" target="_blank" rel="noopener">OCI Free Tier</a></li>
           <li><a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a></li>
           <li><a href="https://ollama.com/library" target="_blank" rel="noopener">Ollama Model Library</a></li>
-          <li><a href="changes.md" target="_blank">Changelog</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <p>Last updated: <strong style="color:rgba(255,255,255,0.6)">April 6, 2025</strong> &mdash; Content may become outdated as software versions change. Verify commands against official documentation.</p>
-      <p style="color:rgba(255,255,255,0.35)">Built with the MiniMax design system</p>
     </div>
   </div>
 </footer>
 
 <script>
   function toggleFaq(item) { item.classList.toggle('open'); }
+  function toggleDrawer(el) { el.classList.toggle('open'); }
 
   function copyCode(btn) {
     const pre = btn.nextElementSibling;
