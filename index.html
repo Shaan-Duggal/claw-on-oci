@@ -379,8 +379,8 @@
   <div class="container">
     <div class="section-header centered">
       <div class="section-label">Installation Guide</div>
-      <h2>8-Step Setup</h2>
-      <p class="section-desc">Follow in order. Total time is approximately 30–45 minutes. OpenClaw runs as a native systemd service; Ollama runs in Docker.</p>
+      <h2>9-Step Setup</h2>
+      <p class="section-desc">Follow in order. Total time is approximately 40–55 minutes. Tailscale installs early so you can switch to its SSH before finishing. OpenClaw runs as a native systemd service; Ollama runs in Docker.</p>
     </div>
 
     <div class="step-progress">
@@ -390,15 +390,17 @@
       <div class="progress-sep"></div>
       <div class="progress-item"><div class="progress-num">3</div> Harden Server</div>
       <div class="progress-sep"></div>
-      <div class="progress-item"><div class="progress-num">4</div> Docker</div>
+      <div class="progress-item"><div class="progress-num">4</div> Tailscale</div>
       <div class="progress-sep"></div>
-      <div class="progress-item"><div class="progress-num">5</div> Deploy Ollama</div>
+      <div class="progress-item"><div class="progress-num">5</div> Docker</div>
       <div class="progress-sep"></div>
-      <div class="progress-item"><div class="progress-num">6</div> Install OpenClaw</div>
+      <div class="progress-item"><div class="progress-num">6</div> Ollama + Models</div>
       <div class="progress-sep"></div>
-      <div class="progress-item"><div class="progress-num">7</div> Tailscale</div>
+      <div class="progress-item"><div class="progress-num">7</div> OpenClaw</div>
       <div class="progress-sep"></div>
-      <div class="progress-item"><div class="progress-num">8</div> Pull Models</div>
+      <div class="progress-item"><div class="progress-num">8</div> Enable Access</div>
+      <div class="progress-sep"></div>
+      <div class="progress-item"><div class="progress-num">9</div> Maintenance</div>
     </div>
 
     <div class="steps-list">
@@ -542,7 +544,7 @@ done</code></pre>
             <li>Port 22 (SSH) should already exist — keep it until Tailscale SSH is working</li>
           </ol>
           <div class="warn-box">
-            <strong>Do NOT open ports 80 or 443.</strong> OpenClaw's gateway binds to <code>127.0.0.1:18789</code> only — it is never exposed directly to the internet. Tailscale Serve (Step 7) creates the HTTPS tunnel privately. Opening 80/443 would expose an unprotected HTTP endpoint.
+            <strong>Do NOT open ports 80 or 443.</strong> OpenClaw's gateway binds to <code>127.0.0.1:18789</code> only — it is never exposed directly to the internet. Tailscale Serve (Step 8) creates the HTTPS tunnel privately. Opening 80/443 would expose an unprotected HTTP endpoint.
           </div>
         </div>
       </div>
@@ -611,8 +613,36 @@ free -h</code></pre>
         <div class="step-header">
           <div class="step-num">4</div>
           <div class="step-meta">
+            <h3>Install Tailscale</h3>
+            <p>Install Tailscale and join your Tailnet now — before the rest of the stack — so you can switch to Tailscale SSH early and drop the public port 22 before finishing setup.</p>
+          </div>
+        </div>
+        <div class="step-content">
+          <div class="pre-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code><span class="comment"># Install Tailscale</span>
+curl -fsSL https://tailscale.com/install.sh | sh
+
+<span class="comment"># Connect to your Tailnet and enable Tailscale SSH.
+# This prints an auth URL — open it on your local machine to approve.</span>
+sudo tailscale up --ssh --hostname=openclaw
+
+<span class="comment"># Confirm it is connected and note the Tailscale IP</span>
+tailscale status</code></pre>
+          </div>
+          <div class="note-box">
+            <strong>Tailscale SSH is now active.</strong> From this point you can SSH via <code>ssh ubuntu@openclaw</code> (or just <code>ssh openclaw</code>) from any device in your Tailnet instead of using the public IP. You can optionally disable port 22 in UFW now: <code>sudo ufw delete allow 22/tcp && sudo ufw reload</code>. The <code>tailscale serve</code> configuration that exposes OpenClaw happens in Step 8, once OpenClaw is running.
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">5</div>
+          <div class="step-meta">
             <h3>Install Docker</h3>
-            <p>Docker is used exclusively for Ollama. OpenClaw itself runs as a native systemd service (installed in Step 6) — Docker is not needed for it.</p>
+            <p>Docker is used exclusively for Ollama. OpenClaw itself runs as a native systemd service (installed in Step 7) — Docker is not needed for it.</p>
           </div>
         </div>
         <div class="step-content">
@@ -632,13 +662,13 @@ docker compose version</code></pre>
         </div>
       </div>
 
-      <!-- Step 5 -->
+      <!-- Step 6 -->
       <div class="step-card">
         <div class="step-header">
-          <div class="step-num">5</div>
+          <div class="step-num">6</div>
           <div class="step-meta">
-            <h3>Deploy Ollama</h3>
-            <p>Run Ollama in Docker with ARM64-optimised performance flags. Binds to <code>127.0.0.1:11434</code> only — OpenClaw connects to it locally.</p>
+            <h3>Deploy Ollama &amp; Pull Models</h3>
+            <p>Run Ollama in Docker with ARM64-optimised flags, then pull your models. Ollama binds to <code>127.0.0.1:11434</code> only — OpenClaw connects to it locally.</p>
           </div>
         </div>
         <div class="step-content">
@@ -674,26 +704,40 @@ mkdir -p ~/ollama && cd ~/ollama</code></pre>
           </div>
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Start Ollama (first run pulls image ~2 GB)</span>
+            <pre><code><span class="comment"># Start Ollama (first run pulls the image — ~2 GB)</span>
 docker compose up -d
 docker compose ps
 
 <span class="comment"># Verify the API is reachable</span>
 curl http://localhost:11434/api/tags</code></pre>
           </div>
+          <p style="font-size:14px;color:var(--text-secondary);margin:20px 0 8px"><strong style="color:var(--text-dark)">Pull models</strong> — see the <a href="#models" style="color:var(--brand-blue)">Models section</a> for the full list with RAM requirements:</p>
+          <div class="pre-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code><span class="comment"># Recommended: start with these three</span>
+docker exec -it ollama ollama pull gemma4:e4b      <span class="comment"># ~3.0 GB — multimodal, recommended</span>
+docker exec -it ollama ollama pull gemma4:e2b      <span class="comment"># ~1.5 GB — fastest variant</span>
+docker exec -it ollama ollama pull llama3.1:8b     <span class="comment"># ~4.7 GB — general purpose workhorse</span>
+
+<span class="comment"># Confirm they're available</span>
+docker exec -it ollama ollama list
+
+<span class="comment"># Quick smoke test</span>
+docker exec -it ollama ollama run gemma4:e4b "Respond in one sentence: what are you?"</code></pre>
+          </div>
           <div class="note-box">
-            <strong>Port binding:</strong> Ollama binds to <code>127.0.0.1:11434</code> — only accessible from the same machine. OpenClaw reaches it at <code>http://localhost:11434</code>. It is never exposed to the internet.
+            <strong>Port binding:</strong> Ollama binds to <code>127.0.0.1:11434</code> — only reachable from the same machine. OpenClaw connects at <code>http://localhost:11434</code>. It is never exposed to the internet.
           </div>
         </div>
       </div>
 
-      <!-- Step 6 -->
+      <!-- Step 7 -->
       <div class="step-card">
         <div class="step-header">
-          <div class="step-num">6</div>
+          <div class="step-num">7</div>
           <div class="step-meta">
             <h3>Install OpenClaw (Native)</h3>
-            <p>Install OpenClaw directly on Ubuntu via the official installer. This gives you native systemd service management — better for a long-running server than Docker.</p>
+            <p>Install OpenClaw via the official installer, configure it against your Ollama instance, then start it as a systemd service and pair your first device.</p>
           </div>
         </div>
         <div class="step-content">
@@ -705,8 +749,8 @@ sudo apt-get install -y nodejs
 node --version   <span class="comment"># should print v24.x.x</span>
 
 <span class="comment"># Install OpenClaw</span>
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
-              
+curl -fsSL https://openclaw.ai/install.sh | bash
+
 <span class="comment"># Reload shell to pick up the openclaw binary</span>
 source ~/.bashrc
 
@@ -714,80 +758,51 @@ source ~/.bashrc
 openclaw --version
 openclaw doctor</code></pre>
           </div>
-          <p style="font-size:14px;color:var(--text-secondary);margin:16px 0 8px"><strong style="color:var(--text-dark)">Run onboarding — this configures the Ollama provider interactively:</strong></p>
+          <p style="font-size:14px;color:var(--text-secondary);margin:16px 0 8px"><strong style="color:var(--text-dark)">Run onboarding — configures the Ollama provider interactively:</strong></p>
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             <pre><code>openclaw onboard
 <span class="comment"># When prompted for a provider, select: Ollama
 # When prompted for the endpoint, enter: http://localhost:11434
-# OpenClaw will query /api/tags and auto-discover all pulled models</span></code></pre>
+# OpenClaw queries /api/tags and auto-discovers all pulled models</span></code></pre>
           </div>
           <div class="warn-box">
-            <strong>Critical Ollama endpoint:</strong> Use <code>http://localhost:11434</code> — do NOT use the OpenAI-compatible <code>/v1</code> path (<code>http://localhost:11434/v1</code>). The <code>/v1</code> endpoint breaks OpenClaw's tool calling and models may output raw tool JSON as plain text instead of executing tools.
+            <strong>Critical Ollama endpoint:</strong> Use <code>http://localhost:11434</code> with no path suffix. Do NOT use <code>http://localhost:11434/v1</code> — the OpenAI-compatible <code>/v1</code> endpoint breaks OpenClaw's tool calling and models output raw JSON instead of executing tools.
           </div>
           <p style="font-size:14px;color:var(--text-secondary);margin:16px 0 8px"><strong style="color:var(--text-dark)">Configure the gateway and start as a systemd service:</strong></p>
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Security hardening for the gateway</span>
+            <pre><code><span class="comment"># Bind gateway to loopback only (Tailscale Serve proxies to it)</span>
 openclaw config set gateway.bind loopback
 openclaw config set gateway.trustedProxies '["127.0.0.1"]'
 
-<span class="comment"># Opening up security for dev and behind tailscale. Keep token or add passowrd for Prod.</span>
+<span class="comment"># Auth mode: none is fine behind Tailscale. Use token for stricter access control.</span>
 openclaw config set gateway.auth.mode none
 openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true
 
-<span class="comment"># Enable Tailscale Serve integration (configured in Step 7)</span>
+<span class="comment"># Enable Tailscale Serve integration (wired up in Step 8)</span>
 openclaw config set gateway.tailscale.mode serve
 
-<span class="comment"># Enable and start the gateway as a user systemd service</span>
+<span class="comment"># Start as a user systemd service (auto-restarts on reboot)</span>
 systemctl --user enable --now openclaw-gateway.service
 openclaw gateway status
 
-<span class="comment"># Health checks</span>
-curl -fsS http://127.0.0.1:18789/healthz   <span class="comment"># → ok</span>
-curl -fsS http://127.0.0.1:18789/readyz    <span class="comment"># → ok</span></code></pre>
+<span class="comment"># Health checks — both should return "ok"</span>
+curl -fsS http://127.0.0.1:18789/healthz
+curl -fsS http://127.0.0.1:18789/readyz</code></pre>
           </div>
-          <div class="note-box">
-            <strong>Auto-discovery:</strong> Setting <code>OLLAMA_API_KEY="ollama-local"</code> in your environment is an alternative to the onboarding flow — OpenClaw will automatically discover all models returned by <code>curl http://localhost:11434/api/tags</code>.
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 7 -->
-      <div class="step-card">
-        <div class="step-header">
-          <div class="step-num">7</div>
-          <div class="step-meta">
-            <h3>Install Tailscale &amp; Enable Access</h3>
-            <p>Tailscale creates a private encrypted network between your devices and the OCI instance. Tailscale Serve proxies HTTPS to OpenClaw — no certificate management required.</p>
-          </div>
-        </div>
-        <div class="step-content">
+          <p style="font-size:14px;color:var(--text-secondary);margin:20px 0 8px"><strong style="color:var(--text-dark)">Pair your first device:</strong></p>
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Install Tailscale</span>
-curl -fsSL https://tailscale.com/install.sh | sh
+            <pre><code><span class="comment"># After Step 8, open https://openclaw.&lt;tailnet-name&gt;.ts.net in a browser.
+# A pairing request will appear — approve it here on the server:</span>
+openclaw devices approve &lt;requestId&gt;
 
-<span class="comment"># Connect to your Tailnet and enable Tailscale SSH
-# (opens a browser auth URL — complete on your local machine)</span>
-sudo tailscale up --ssh --hostname=openclaw
-
-<span class="comment"># Proxy HTTPS traffic to the OpenClaw gateway</span>
-sudo tailscale serve https / http://127.0.0.1:18789
-
-<span class="comment"># Check status — note your Tailscale hostname</span>
-tailscale status
-tailscale serve status</code></pre>
+<span class="comment"># Confirm the device is connected</span>
+openclaw devices list</code></pre>
           </div>
           <div class="note-box">
-            <strong>Your access URL:</strong> After running <code>tailscale serve</code>, OpenClaw is reachable at <code>https://openclaw.&lt;tailnet-name&gt;.ts.net</code> from any device in your Tailnet. Tailscale automatically provisions and renews the HTTPS certificate — no Let's Encrypt setup needed.
-          </div>
-          <div class="pre-wrap">
-            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Optional: once Tailscale SSH is working, disable port 22 in UFW
-# (you can SSH via: ssh openclaw instead of ssh ubuntu@PUBLIC_IP)</span>
-sudo ufw delete allow 22/tcp
-sudo ufw reload</code></pre>
+            <strong>Auto-discovery alternative:</strong> Set <code>OLLAMA_API_KEY="ollama-local"</code> in your environment to skip the onboarding flow — OpenClaw will auto-discover all models from <code>/api/tags</code>.
           </div>
         </div>
       </div>
@@ -797,46 +812,91 @@ sudo ufw reload</code></pre>
         <div class="step-header">
           <div class="step-num">8</div>
           <div class="step-meta">
-            <h3>Pull Models &amp; Pair Devices</h3>
-            <p>Download AI models into Ollama, then pair your local machines to the OpenClaw gateway.</p>
+            <h3>Enable Tailscale Access</h3>
+            <p>Configure Tailscale Serve to proxy HTTPS traffic to the running OpenClaw gateway. This is the final step before you can open the dashboard from any device on your Tailnet.</p>
           </div>
         </div>
         <div class="step-content">
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Pull recommended models (see Models section for full list)</span>
-docker exec -it ollama ollama pull gemma4:e4b      <span class="comment"># ~3.0 GB — multimodal, recommended start</span>
-docker exec -it ollama ollama pull gemma4:e2b      <span class="comment"># ~1.5 GB — fastest</span>
-docker exec -it ollama ollama pull llama3.1:8b     <span class="comment"># ~4.7 GB — general purpose</span>
+            <pre><code><span class="comment"># Proxy HTTPS → OpenClaw gateway (Tailscale provisions the cert automatically)</span>
+sudo tailscale serve https / http://127.0.0.1:18789
 
-<span class="comment"># Verify models are available</span>
-docker exec -it ollama ollama list
+<span class="comment"># Confirm the serve rule is active</span>
+tailscale serve status
 
-<span class="comment"># Quick test</span>
-docker exec -it ollama ollama run gemma4:e4b "Hello, what models do you know?"</code></pre>
+<span class="comment"># Confirm Tailscale is fully connected</span>
+tailscale status</code></pre>
+          </div>
+          <div class="note-box">
+            <strong>Your access URL:</strong> OpenClaw is now reachable at <code>https://openclaw.&lt;tailnet-name&gt;.ts.net</code> from any device in your Tailnet. Tailscale automatically provisions and renews the HTTPS certificate — no Let's Encrypt or domain registration needed.
           </div>
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Open your Tailscale URL in a browser on your local machine:
-# https://openclaw.&lt;tailnet-name&gt;.ts.net
-#
-# A pairing request will appear — approve it from the server:</span>
-openclaw devices approve &lt;requestId&gt;
-
-<span class="comment"># View connected devices</span>
-openclaw devices list</code></pre>
+            <pre><code><span class="comment"># Drop the public SSH port — Tailscale SSH handles all access from here on</span>
+sudo ufw delete allow 22/tcp
+sudo ufw reload
+sudo ufw status verbose   <span class="comment"># should show no remaining ingress rules</span></code></pre>
           </div>
+          <div class="note-box">
+            <strong>Zero public ports:</strong> After removing port 22, the instance has no listening ports exposed to the internet. All access is over Tailscale's encrypted WireGuard tunnel via UDP 41641.
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 9 -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num">9</div>
+          <div class="step-meta">
+            <h3>Ongoing Maintenance</h3>
+            <p>Commands for keeping the stack up to date, adding models, and backing up your data.</p>
+          </div>
+        </div>
+        <div class="step-content">
+          <p style="font-size:14px;color:var(--text-secondary);margin-bottom:12px"><strong style="color:var(--text-dark)">Update Ollama and running containers:</strong></p>
           <div class="pre-wrap">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <pre><code><span class="comment"># Maintenance: update Ollama and models</span>
+            <pre><code><span class="comment"># Pull latest Ollama image and restart</span>
 cd ~/ollama && docker compose pull && docker compose up -d
 
-<span class="comment"># Update OpenClaw</span>
+<span class="comment"># Update an existing model to its latest version</span>
+docker exec -it ollama ollama pull gemma4:e4b
+
+<span class="comment"># List all models and their sizes</span>
+docker exec -it ollama ollama list
+
+<span class="comment"># Check resource usage</span>
+docker stats ollama</code></pre>
+          </div>
+          <p style="font-size:14px;color:var(--text-secondary);margin:20px 0 8px"><strong style="color:var(--text-dark)">Update OpenClaw:</strong></p>
+          <div class="pre-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code><span class="comment"># Re-run the installer to get the latest version</span>
 curl -fsSL https://openclaw.ai/install.sh | bash
 
-<span class="comment"># Backup Ollama model data</span>
-docker run --rm -v ollama_data:/data -v $(pwd):/backup \
-  ubuntu tar czf /backup/ollama-backup.tar.gz /data</code></pre>
+<span class="comment"># Restart the systemd service to apply the update</span>
+systemctl --user restart openclaw-gateway.service
+openclaw gateway status
+openclaw --version</code></pre>
+          </div>
+          <p style="font-size:14px;color:var(--text-secondary);margin:20px 0 8px"><strong style="color:var(--text-dark)">Backup and restore:</strong></p>
+          <div class="pre-wrap">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code><span class="comment"># Backup Ollama model data (Docker volume)</span>
+docker run --rm \
+  -v ollama_data:/data \
+  -v $HOME/backups:/backup \
+  ubuntu tar czf /backup/ollama-$(date +%Y%m%d).tar.gz /data
+
+<span class="comment"># Backup OpenClaw config and sessions</span>
+tar czf $HOME/backups/openclaw-$(date +%Y%m%d).tar.gz ~/.openclaw
+
+<span class="comment"># Restore Ollama data</span>
+docker run --rm \
+  -v ollama_data:/data \
+  -v $HOME/backups:/backup \
+  ubuntu tar xzf /backup/ollama-YYYYMMDD.tar.gz -C /</code></pre>
           </div>
         </div>
       </div>
@@ -1099,7 +1159,7 @@ docker exec -it ollama ollama list</code></pre>
         <h4>Guide</h4>
         <ul>
           <li><a href="#prerequisites">Prerequisites</a></li>
-          <li><a href="#setup">8-Step Setup</a></li>
+          <li><a href="#setup">9-Step Setup</a></li>
           <li><a href="#models">Model Library</a></li>
           <li><a href="#optimization">Optimization</a></li>
           <li><a href="#faq">FAQ</a></li>
